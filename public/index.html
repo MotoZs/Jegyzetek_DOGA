@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Jegyzetek</title>
+  <style>
+    body { font-family: 'Times New Roman', Times, serif; max-width: 600px; margin: auto; }
+    label, input, textarea, button { display: block; width: 100%; margin-top: 10px; }
+    hr { margin: 20px 0; }
+    button{color: white;}
+    .hoz{background-color: green;}
+    .lek{background-color: blue;}
+    .tor{background-color: red;}
+  </style>
+</head>
+<body>
+  <h1>Jegyzetek</h1>
+  <ul id="noteList"></ul>
+
+  <hr>
+
+  <h2>Új jegyzet hozzáadása</h2>
+  <input id="newTitle" placeholder="Cím">
+  <textarea id="newContent" placeholder="Tartalom"></textarea>
+  <button class="hoz" onclick="addNote()">Hozzáadás</button>
+
+  <hr>
+
+  <h2>Jegyzet lekérdezése ID alapján</h2>
+  <input id="fetchId" type="number" placeholder="ID">
+  <button class="lek" onclick="fetchNote()">Lekér</button>
+  <pre id="fetchResult"></pre>
+
+  <hr>
+
+  <h2>Jegyzet törlése ID alapján</h2>
+  <input id="deleteId" type="number" placeholder="Jegyzet ID">
+  <button class="tor" onclick="deleteNote()">Törlés</button>
+  <pre id="deleteResult"></pre>
+
+  <script>
+    const list = document.getElementById('noteList');
+
+    function loadNotes() {
+      fetch('/notes')
+        .then(res => res.json())
+        .then(data => {
+          list.innerHTML = '';
+          data.forEach(note => {
+            const li = document.createElement('li');
+            li.textContent = `#${note.id} - ${note.title}: ${note.content}`;
+            list.appendChild(li);
+          });
+        });
+    }
+
+    function addNote() {
+      const title = document.getElementById('newTitle').value;
+      const content = document.getElementById('newContent').value;
+
+      fetch('/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(`Jegyzet létrehozva ID: ${data.id}`);
+        loadNotes();
+        document.getElementById('newTitle').value = '';
+        document.getElementById('newContent').value = '';
+      });
+    }
+
+    function fetchNote() {
+      const id = document.getElementById('fetchId').value;
+      fetch(`/notes/${id}`)
+        .then(res => {
+          if (!res.ok) throw new Error("Nincs ilyen jegyzet");
+          return res.json();
+        })
+        .then(note => {
+          document.getElementById('fetchResult').textContent =
+            `#${note.id}\n${note.title}\n${note.content}`;
+        })
+        .catch(err => {
+          document.getElementById('fetchResult').textContent = err.message;
+        });
+    }
+
+    function deleteNote() {
+      const id = document.getElementById('deleteId').value;
+      fetch(`/notes/${id}`, { method: 'DELETE' })
+        .then(res => {
+          if (res.status === 204) {
+            document.getElementById('deleteResult').textContent = 'Sikeresen törölve';
+            loadNotes();
+          } else {
+            return res.json().then(err => {
+              document.getElementById('deleteResult').textContent = err.error;
+            });
+          }
+        });
+    }
+
+    loadNotes();
+  </script>
+</body>
+</html>
